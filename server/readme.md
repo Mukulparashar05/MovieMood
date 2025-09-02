@@ -1,2 +1,8 @@
 we use mongoose.atlas for the cloud db and clerk to get the user information 
-from clerk we use webbook its like a messenger and in webbook we use innget that is used for Inngest = event-driven background jobs + scheduling platform for modern web apps. 
+from clerk we use webbook its like a messenger and in webbook we use inngest that is used for Inngest = event-driven background jobs + scheduling platform for modern web apps. 
+now deploy the project on vercel 
+use tmdb for movie data
+we import axios to make http requests
+we use postman to test our api 
+
+
