@@ -1,11 +1,15 @@
 
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
+import User from "../models/User.js";
 
 //Api to check if user is admin 
 export const isAdmin = async(req,res) =>{
-    res.json({success:true,isAdmin:true})
+ res.json({success:true,isAdmin:true})
 }
+
+
+
 
 
 //API to get dashboard data
