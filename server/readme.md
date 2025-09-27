@@ -4,7 +4,8 @@ now deploy the project on vercel
 use tmdb for movie data
 we import axios to make http requests
 we use postman to test our api 
-we use strive for online payment gatway 
+we use stripe for online payment gatway 
 svix a topon service over the webhook for easy flow
 
-
+we use nodemailer for mails
+smtp user and smtp pass is used in modemailer to get this we are going to use Brevo.com
