@@ -7,5 +7,5 @@ we use postman to test our api
 we use stripe for online payment gatway 
 svix a topon service over the webhook for easy flow
 
-we use nodemailer for mails
+we use nodemailer for emails
 smtp user and smtp pass is used in modemailer to get this we are going to use Brevo.com
