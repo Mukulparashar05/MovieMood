@@ -1,7 +1,8 @@
 import Show from "../models/Show.js"
 import Booking from "../models/Booking.js";
-import stripe from 'stripe'
+import Stripe from 'stripe'
 import { inngest } from "../inngest/index.js";
+import { getAuthUserId } from "../middleware/auth.js";
 
 
 //Function to check availability of the selected seats for a movie
@@ -23,9 +24,17 @@ return false;
 
 export const createBooking = async(req,res)=>{
     try{
-        const {userId} = req.auth();
+        const userId = getAuthUserId(req);
         const{showId,selectedSeats} = req.body;
-        const {origin} = req.headers;
+        const clientBaseUrl = process.env.CLIENT_URL || req.headers.origin;
+
+        if (!showId || !Array.isArray(selectedSeats) || !selectedSeats.length) {
+            return res.status(400).json({ success: false, message: "showId and selectedSeats are required." })
+        }
+
+        if (selectedSeats.length > 5) {
+            return res.status(400).json({ success: false, message: "You can only book up to 5 seats." })
+        }
 
         //check if the seat is available for theselected show
 
@@ -38,15 +47,20 @@ export const createBooking = async(req,res)=>{
 //get the show details 
 const showData = await Show.findById(showId).populate('movie');
 
+if (!showData || !showData.movie) {
+    return res.status(404).json({ success: false, message: "Show not found." })
+}
+
 //create a new booking 
 const booking = await Booking.create({
     user:userId,
     show:showId,
     amount:showData.showPrice * selectedSeats.length,
-    bookedSeats:selectedSeats
+    bookedSeats:selectedSeats,
+    isPaid:false,
 })
 
-selectedSeats.map(()=>{
+selectedSeats.forEach((seat)=>{
     showData.occupiedSeats[seat] = userId;
 })
 showData.markModified('occupiedSeats');
@@ -54,7 +68,11 @@ showData.markModified('occupiedSeats');
 await showData.save();
 
 //stripe Gateway Initilize
-const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY)
+if (!process.env.STRIPE_SECRET_KEY || !clientBaseUrl) {
+    return res.status(500).json({ success: false, message: "Payment configuration is incomplete." })
+}
+
+const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 //CREATING LINE ITEMS TO FOE STRIPE
 const line_items =[{
@@ -68,9 +86,9 @@ const line_items =[{
     quantity: 1
 }]
 
-const session = await stripeInstance.chechout.sessions.create({
-    success_url:`${origin}/loading/my_bookings`,
-    cancel_url:`${origin}/my_bookings`,
+const session = await stripeInstance.checkout.sessions.create({
+    success_url:`${clientBaseUrl}/loading/my-bookings`,
+    cancel_url:`${clientBaseUrl}/my-bookings`,
     line_items:line_items,
     mode:'payment',
     metadata: {
@@ -100,6 +118,9 @@ export const getOccupiedSeats= async (req,res)=>{
     try{
 const {showId} = req.params;
 const showData = await Show.findById(showId)
+if (!showData) {
+    return res.status(404).json({ success: false, message: "Show not found." })
+}
 const occupiedSeats = Object.keys(showData.occupiedSeats)
 
 res.json({success:true,occupiedSeats})

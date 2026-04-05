@@ -27,7 +27,27 @@ input::-webkit-inner-spin-button {
   -webkit-appearance: none;
 }
 
-::-webkit-calender-picker-indicator {
+::-webkit-calendar-picker-indicator {
   filter: invert(1);
+  cursor: pointer;
 }
 
+.admin-datetime-input {
+  color-scheme: dark;
+}
+
+.admin-datetime-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.85;
+}
+
+.admin-datetime-input::-webkit-datetime-edit,
+.admin-datetime-input::-webkit-datetime-edit-fields-wrapper,
+.admin-datetime-input::-webkit-datetime-edit-text,
+.admin-datetime-input::-webkit-datetime-edit-month-field,
+.admin-datetime-input::-webkit-datetime-edit-day-field,
+.admin-datetime-input::-webkit-datetime-edit-year-field,
+.admin-datetime-input::-webkit-datetime-edit-hour-field,
+.admin-datetime-input::-webkit-datetime-edit-minute-field {
+  color: white;
+}

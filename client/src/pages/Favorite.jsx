@@ -1,8 +1,7 @@
 import React from 'react'
-
 import MovieCard from '../components/MovieCard'
 import BlurCircle from '../components/BlurCircle'
-import { useAppContext } from '../context/AppContext'
+import { useAppContext } from '../context/appContext'
 const Favorite = () => {
 
   const {favoriteMovies} = useAppContext()
@@ -14,7 +13,7 @@ const Favorite = () => {
       <h1 className='text-lg font-medium my-4 ' >Your Favorite Movies</h1>
       <div className='flex flex-wrap max-sm:justify-center gap-8'>
         {favoriteMovies.map((movie)=> (
-<MovieCard movie={movie} key={moveBy._id} />
+<MovieCard movie={movie} key={movie._id} />
         ) )}
       </div>
     </div>

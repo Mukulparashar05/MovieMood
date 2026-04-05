@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { dummyDateTimeData, dummyShowsData } from '../assets/assets'
 import BlurCircle from '../components/BlurCircle'
 import { Heart, PlayCircleIcon, StarIcon } from 'lucide-react'
 import timeFormat from '../lib/timeFormat'
 import DateSelects from '../components/DateSelects'
 import MovieCard from '../components/MovieCard'
 import Loading from '../components/Loading'
-import { useAppContext } from '../context/AppContext'
+import { useAppContext } from '../context/appContext'
+import toast from 'react-hot-toast'
 
 const MovieDetails = () => {
 
@@ -16,34 +16,55 @@ const MovieDetails = () => {
   const { id } = useParams()
   const [show, setShow] = useState(null)
 
-  const { shows,axios,getToken,user,fetchFavoriteMovies,favoriteMovies,image_base_url} = useAppContext()
+  const { axios, favoriteMovies, fetchFavoriteMovies, getAuthHeaders, imageBaseUrl, shows, user } = useAppContext()
 
-  const getShow = async () => {
-    try{
-const {data}= await axios.get('/api/show/${id}')
-if(data.success){
-  setShow(data)
-}
-    }catch(error){
-console.log(error)
+  const getShow = useCallback(async () => {
+    if (!id || !/^\d+$/.test(id)) {
+      toast.error('Invalid movie selected')
+      navigate('/movies')
+      return
     }
-  }
-  const handleFavorite = async ()=>{
-    try{
-      if(!user) return toast.error("please login to proceed");
-      const { data } = await axios.post('/api/user/update-favorite',{movieId: id},{headers: {Authorizaton: `Bearer ${await getToken()}`}})
-      if(data.success){
+
+    try {
+      const { data } = await axios.get(`/api/show/${id}`)
+      if (data.success) {
+        setShow(data)
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Unable to load movie details')
+    }
+  }, [axios, id, navigate])
+
+  const handleFavorite = async () => {
+    try {
+      if (!user) {
+        return toast.error('Please login to continue')
+      }
+
+      const { data } = await axios.post(
+        '/api/user/update-favorite',
+        { movieId: id },
+        { headers: await getAuthHeaders() },
+      )
+
+      if (data.success) {
         await fetchFavoriteMovies()
         toast.success(data.message)
+      } else {
+        toast.error(data.message)
       }
-    } catch (error){
-
+    } catch (error) {
+      console.error(error)
+      toast.error('Unable to update favorites')
     }
   }
 
   useEffect(() => {
     getShow()
-  }, [id])
+  }, [getShow])
 
   return show ? (
 
@@ -51,14 +72,14 @@ console.log(error)
 
       <div className='flex flex-col md:flex-row gap-8 max-w-6xl mx-auto' >
         <img
-          src={image_base_url+show.movie.poster_path}
+          src={imageBaseUrl + show.movie.poster_path}
           alt=""
           className='max-md:mx-auto rounded-xl h-104 max-w-70 object-cover'
         />
 
         <div className='relative flex flex-col gap-3'>
           <BlurCircle top="-100px" left="-100px" />
-          <p className='text-primary' >ENGLISH</p>
+          <p className='text-primary' >{show.movie.original_language?.toUpperCase() || 'N/A'}</p>
           <h1 className='text-4xl font-semibold max-w-96 text-balance' >{show.movie.title}</h1>
           <div className='flex items-center gap-2 text-gray-300'>
             <StarIcon className="w-5 h-5 text-primary fill-primary" />
@@ -92,7 +113,7 @@ console.log(error)
         <div className='flex items-center gap-4 w-max px-4' >
           {show.movie.casts.slice(0, 12).map((cast, index) => (
             <div key={index} className='flex flex-col items-center text-center' >
-              <img src={image_base_url + cast.profile_path} alt="" className='rounded-full h-20 md:h-20 aspect-square object-cover' />
+              <img src={imageBaseUrl + cast.profile_path} alt={cast.name} className='rounded-full h-20 md:h-20 aspect-square object-cover' />
               <p className='font-medium text-xs mt-3 '>{cast.name}</p>
             </div>
           ))}
@@ -103,8 +124,8 @@ console.log(error)
       <div id="DateSelects">
         <DateSelects dateTime={show.dateTime} id={id} />
         <p className='text-lg font-medium mt-20 mb-8'>You May Also Like</p>
-        <div className='flex flex-wrap max-sm:justify-center gap-8'>{shows.slice(0, 4).map((movie, index) => (
-          <MovieCard key={index} movie={movie} />
+        <div className='flex flex-wrap max-sm:justify-center gap-8'>{shows.filter((movie) => movie._id !== id).slice(0, 4).map((movie) => (
+          <MovieCard key={movie._id} movie={movie} />
         ))}</div>
         <div className='flex justify-center mt-20'>
           <button onClick={() => { navigate('/movies'); scrollTo(0, 0) }} className='px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-medium cursor-pointer'>Show more</button>

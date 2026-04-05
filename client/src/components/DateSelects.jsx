@@ -19,7 +19,7 @@ scrollTo(0,0)
 
     }
     return (
-        <div id="DateSelects " className='pt-30'>
+        <div id="DateSelects" className='pt-30'>
             <div className='flex flex-col md:flex-row items-center justify-between gap-10 relative p-8 bg-primary/10 border border-primary/20 rounded-lg'>
                 <BlurCircle top="-100px" left="-100px" />
                 <BlurCircle top="-100px" right="0px" />

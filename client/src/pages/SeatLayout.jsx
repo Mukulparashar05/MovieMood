@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { assets, dummyDateTimeData, dummyShowsData } from '../assets/assets'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { assets } from '../assets/assets'
 import Loading from '../components/Loading'
 import { ArrowRightIcon, ClockIcon } from 'lucide-react'
 import isoTimeFormat from '../lib/isoTimeFormat'
 import BlurCircle from '../components/BlurCircle'
 import toast from 'react-hot-toast'
-import { useAppContext } from '../context/AppContext'
+import { useAppContext } from '../context/appContext'
 const SeatLayout = () => {
 
   const groupRows = [["A", "B"], ["C", "D"], ["E", "F"], ["G", "H"], ["I", "J"]]
@@ -16,20 +16,22 @@ const SeatLayout = () => {
   const [selectedTime, setSelectedTime] = useState(null)
   const [show, setshow] = useState(null)
   const [occupiedSeats,setOccupiedSeats] = useState([])
-  const navigate = useNavigate()
 
-const {axios,getToken,user} = useAppContext();
+const { axios, getAuthHeaders, user } = useAppContext();
 
-  const getshow = async () => {
-   try{
-const {data} = await axios.get(`/api/show/${id}`)
-if(data.success){
-  setshow(data)
-}
-   }catch(error){
-    console.log(error)
-   }
-  }
+  const getshow = useCallback(async () => {
+    try{
+      const {data} = await axios.get(`/api/show/${id}`)
+      if(data.success){
+        setshow(data)
+      } else {
+        toast.error(data.message)
+      }
+    }catch(error){
+      console.error(error)
+      toast.error('Unable to load show details')
+    }
+  }, [axios, id])
 
   const handleSeatClick = (seatId) => {
     if (!selectedTime) {
@@ -59,25 +61,29 @@ if(data.success){
     </div>
   )
 
-  const getOccupiedSeats =async ()=>{
-    try{
-const {data} = await axios.get(`/api/booking/seats/${selectedTime.showId}`)
-if(data.success){
-  setOccupiedSeats(data.occupiedSeats)
-}
-else{
-  toast.error(data.message)
-}
-    }catch(error){
-      console.log(error)
+  const getOccupiedSeats = useCallback(async ()=>{
+    if (!selectedTime?.showId) {
+      return
     }
-  }
+
+    try{
+      const {data} = await axios.get(`/api/booking/seats/${selectedTime.showId}`)
+      if(data.success){
+        setOccupiedSeats(data.occupiedSeats)
+      }
+      else{
+        toast.error(data.message)
+      }
+    }catch(error){
+      console.error(error)
+    }
+  }, [axios, selectedTime?.showId])
 
 const bookTickets = async ()=>{
   try{
     if(!user) return toast.error("please login to proceed")
       if(!selectedTime || !selectedSeats.length) return toast.error('please select a time and seats')
-        const {data} = await axios.post('/api/booking/create',{showId:selectedTime.showId,selectedSeats},{headers: {Authorization: `Bearer ${await getToken()}`}});
+        const {data} = await axios.post('/api/booking/create',{showId:selectedTime.showId,selectedSeats},{headers: await getAuthHeaders()});
 
     if(data.success){
     window.location.href = data.url;
@@ -94,13 +100,17 @@ catch(error){
 
   useEffect(() => {
     getshow()
-  }, [])
+  }, [getshow])
 
   useEffect(()=>{
     if(selectedTime){
       getOccupiedSeats()
+    } else {
+      setOccupiedSeats([])
     }
-  },[selectedTime])
+  },[getOccupiedSeats, selectedTime])
+
+  const availableTimings = useMemo(() => show?.dateTime?.[date] || [], [date, show?.dateTime])
 
   return show ? (
     <div className='flex flex-col md:flex-row px-6 md:px-16 lg:px-40 py-30 md:pt-50'>
@@ -108,7 +118,7 @@ catch(error){
       <div className='w-60 bg-primary/10 border border-primary/20 rounded-lg py-10 h-max md:sticky md:top-30' >
         <p className='text-lg font-semibold px-6'>Available Timings</p>
         <div className='mt-5 space-y-1'>
-          {show.dateTime[date]?.map((item) => (
+          {availableTimings.map((item) => (
 
             <div key={item.time} onClick={() => setSelectedTime(item)} className={`flex items-center gap-2 px-6 py-2 w-max rounded-r-md cursor-pointer transition ${selectedTime?.time === item.time ?
               "bg-primary text-white" : "hover:bg-primary/20"
@@ -118,6 +128,9 @@ catch(error){
             </div>
 
           ))}
+          {availableTimings.length === 0 && (
+            <p className='px-6 text-sm text-gray-400'>No showtimes available for this date.</p>
+          )}
         </div>
       </div>
       {/*Seats Layout */}
@@ -154,4 +167,3 @@ catch(error){
 }
 
 export default SeatLayout
-

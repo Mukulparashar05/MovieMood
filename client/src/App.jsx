@@ -8,13 +8,15 @@ import MovieDetails from './pages/MovieDetails'
 import SeatLayout from './pages/SeatLayout'
 import MyBookings from './pages/MyBookings'
 import Favorite from './pages/Favorite'
+import Theaters from './pages/Theaters'
+import Releases from './pages/Releases'
 import { Toaster } from 'react-hot-toast'
 import Dashboard from './pages/admin/Dashboard'
 import AddShows from './pages/admin/AddShows'
 import ListShows from './pages/admin/ListShows'
 import ListBooking from './pages/admin/ListBooking'
 import  Layout  from './pages/admin/Layout'
-import { useAppContext } from './context/AppContext'
+import { useAppContext } from './context/appContext'
 import { SignIn } from '@clerk/clerk-react'
 import Loading from './components/Loading'
 const App = () => {
@@ -27,10 +29,12 @@ const {user} =useAppContext()
       <Routes>
         <Route path='/' element={<Home />} />
         <Route path='/movies' element={<Movies />} />
+        <Route path='/theaters' element={<Theaters />} />
+        <Route path='/releases' element={<Releases />} />
         <Route path='/movies/:id' element={<MovieDetails />} />
         <Route path='/movies/:id/:date' element={<SeatLayout />} />
         <Route path='/my-bookings' element={<MyBookings />} />
-        <Route path='/loading/:nexturl' element={<Loading />} />
+        <Route path='/loading/:nextUrl' element={<Loading />} />
         <Route path='/favorite' element={<Favorite />} />
 
 

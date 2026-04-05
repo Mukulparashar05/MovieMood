@@ -1,34 +1,40 @@
-import React, { useEffect, useState } from 'react'
-import { dummyBookingData } from '../../assets/assets';
+import React, { useCallback, useEffect, useState } from 'react'
 import Loading from '../../components/Loading';
 import Title from '../../components/admin/Title';
 import { dateFormat } from '../../lib/DateFormat';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext } from '../../context/appContext';
+import toast from 'react-hot-toast';
 
 const ListBooking = () => {
   const currency = import.meta.env.VITE_CURRENCY
 
-  const {axios,getToken,user} = useAppContext();
+  const { axios, getAuthHeaders, user } = useAppContext();
 
   const [bookings,setBookings] = useState([]);
   const[isLoading,setIsLoading] = useState(true);
 
-  const getAllBookings = async () => {
+  const getAllBookings = useCallback(async () => {
  try{
-const { data } = await axios.get("/api/admin/all-bookings ",{
-  header: {Authorization: `Bearer ${await getToken()}`}
+const { data } = await axios.get("/api/admin/all-bookings",{
+  headers: await getAuthHeaders()
 });
-setBookings(data.bookings)
+if (data.success) {
+  setBookings(data.bookings)
+} else {
+  toast.error(data.message)
+}
  }catch(error){
    console.error(error);
+   toast.error('Unable to load bookings')
+ } finally {
+  setIsLoading(false)
  }
- setIsLoading(false)
-  };
+  }, [axios, getAuthHeaders]);
 
 useEffect(()=>{
   if(user){
 getAllBookings();}
-},[user]);
+},[getAllBookings, user]);
 
   return !isLoading ?(
     <>
@@ -48,11 +54,11 @@ getAllBookings();}
   <tbody className='text-sm font-light'> 
 {bookings.map((item,index) =>(
   <tr key= {index} className='border-b border-primary/20 bg-primary/5 even:bg-primary/10'>
-    <td className='p-2 min-w-45 pl-5'>{item.user.name}</td>
-    <td className='p-2'>{item.show.movie.title}</td>
-    <td className='p-2'>{dateFormat(item.show.showDateTime)}</td>
-    <td className='p-2'>{Object.keys(item.bookedSeats).map(seat=>item.bookedSeats[seat]).join(", ")}</td>
-    <td className='p-2'>{currency} {item.amount}</td>
+    <td className='p-2 min-w-45 pl-5'>{item.user?.name || 'Unknown User'}</td>
+    <td className='p-2'>{item.show?.movie?.title || 'Show unavailable'}</td>
+    <td className='p-2'>{item.show?.showDateTime ? dateFormat(item.show.showDateTime) : 'Time unavailable'}</td>
+    <td className='p-2'>{Array.isArray(item.bookedSeats) ? item.bookedSeats.join(", ") : 'N/A'}</td>
+    <td className='p-2'>{currency} {item.amount ?? 0}</td>
   </tr>
 ))}
   </tbody>

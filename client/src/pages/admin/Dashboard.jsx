@@ -1,15 +1,14 @@
 import { ChartLineIcon, CircleDollarSignIcon, PlayCircleIcon, StarIcon, UsersIcon } from 'lucide-react';
-import React, { useEffect, useState } from 'react'
-import { dummyDashboardData } from '../../assets/assets';
+import React, { useCallback, useEffect, useState } from 'react'
 import Loading from '../../components/Loading';
 import Title from '../../components/admin/Title';
 import BlurCircle from '../../components/BlurCircle';
-import { dateFormat } from '../../lib/DateFormat';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext } from '../../context/appContext';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
 
-const {axios,getToken,user,image_base_url} = useAppContext();
+const { axios, getAuthHeaders, imageBaseUrl, user } = useAppContext();
 
 
   const currency = import.meta.env.VITE_CURRENCY
@@ -18,7 +17,7 @@ const {axios,getToken,user,image_base_url} = useAppContext();
     totalBookings: 0,
     totalRevenue: 0,
     activeShows: [],
-    totalUsers: 0,
+    totalUser: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -26,27 +25,29 @@ const {axios,getToken,user,image_base_url} = useAppContext();
     { title: "Total Booking", value: dashboardData.totalBookings || "0", icon: ChartLineIcon },
     { title: "Total Revenue", value: currency + dashboardData.totalRevenue || "0", icon: CircleDollarSignIcon },
     { title: "Active Shows", value: dashboardData.activeShows.length || "0", icon: PlayCircleIcon },
-    { title: "Total Users", value: dashboardData.totalBookings || "0", icon: UsersIcon },
+    { title: "Total Users", value: dashboardData.totalUser || "0", icon: UsersIcon },
   ]
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
    try{
 const { data }= await axios.get("/api/admin/dashboard",{headers:{
-  Authorization: `Bearer ${await getToken()}`
+  ...(await getAuthHeaders())
 }})
 if(data.success){
   setDashboardData(data.dashboardData)
-  setLoading(false)
 }else{
   toast.error(data.message)
 }
    }catch(error){
-toast.error('Error fetching dashboard data:',error)
+toast.error('Error fetching dashboard data')
+console.error(error)
+   } finally {
+    setLoading(false)
    }
-  };
+  }, [axios, getAuthHeaders]);
   useEffect(() => {
     if(user){
     fetchDashboardData();}
-  }, [user]);
+  }, [fetchDashboardData, user]);
 
   return !loading ? (
     <>
@@ -73,7 +74,7 @@ toast.error('Error fetching dashboard data:',error)
         <BlurCircle top="100px" left="-10%" />
         {dashboardData.activeShows.map((show) => (
           <div key={show._id} className='w-55 rounded-lg overflow-hidden h-full pb-3 bg-primary/10 border border-primary/20 hover: -translate-y-1 transition duration-300'>
-            <img src={image_base_url + show.movie.poster_path} alt="" className='h-60 w-full object-cover' />
+            <img src={imageBaseUrl + show.movie.poster_path} alt={show.movie.title} className='h-60 w-full object-cover' />
             <p className='font-medium p-2 truncate'>{show.movie.title}</p>
             <div className='flex items-center justify-between px-2'>
               <p className='text-lg font-medium'>{currency} {show.showPrice}</p>

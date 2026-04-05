@@ -1,33 +1,37 @@
-import React, { useEffect, useState } from 'react'
-import { dummyShowsData } from '../../assets/assets';
+import React, { useCallback, useEffect, useState } from 'react'
 import Loading from '../../components/Loading';
 import Title from '../../components/admin/Title';
 import { dateFormat } from '../../lib/DateFormat';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext } from '../../context/appContext';
+import toast from 'react-hot-toast';
 
 const ListShows = () => {
   const currency = import.meta.env.VITE_CURRENCY
-  const {axios,getToken,user} = useAppContext();
+  const { axios, getAuthHeaders, user } = useAppContext();
   const[shows,setShows] = useState([]);
   const[loading,setLoading]= useState(true);
 
-const getAllShows = async () =>{
+const getAllShows = useCallback(async () =>{
   try {
-  
-    const { data } = await axios.get("apai/admin/all-shows",{
-      headers: { Authorization: `Bearer ${await getToken()}`}
+    const { data } = await axios.get("/api/admin/all-shows",{
+      headers: await getAuthHeaders()
     }); 
-setShows(data.shows)
-    setLoading(false);
-    
+    if (data.success) {
+      setShows(data.shows)
+    } else {
+      toast.error(data.message)
+    }
   } catch (error){
     console.error(error);
+    toast.error('Unable to load shows')
+  } finally {
+    setLoading(false);
   }
-}
+}, [axios, getAuthHeaders])
 useEffect(()=>{
   if(user){
   getAllShows();}
-},[user])
+},[getAllShows, user])
 
 
   return !loading ? (
