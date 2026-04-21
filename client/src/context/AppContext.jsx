@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { AppContext } from './appContext'
 import { getApiBaseUrl } from '../lib/api'
+import { getAuthHeaders as buildAuthHeaders } from '../lib/authHeaders'
 
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
@@ -20,25 +21,45 @@ export const AppProvider = ({ children }) => {
 
   const imageBaseUrl = import.meta.env.VITE_TMDB_IMAGE_BASE_URL || 'https://image.tmdb.org/t/p/w500'
 
-  const { user } = useUser()
-  const { getToken } = useAuth()
+  const { user, isLoaded: isUserLoaded } = useUser()
+  const { getToken, isLoaded: isAuthLoaded } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const isClerkLoaded = isAuthLoaded && isUserLoaded
 
   const getAuthHeaders = useCallback(async () => {
-    const token = await getToken()
-    return token ? { Authorization: `Bearer ${token}` } : {}
-  }, [getToken])
+    return buildAuthHeaders({
+      getToken,
+      isAuthLoaded: isClerkLoaded,
+    })
+  }, [getToken, isClerkLoaded])
 
   const fetchIsAdmin = useCallback(async () => {
+    if (!isClerkLoaded) {
+      return false
+    }
+
     if (!user) {
       setIsAdmin(false)
       return false
     }
 
     try {
+      const authHeaders = await getAuthHeaders()
+
+      if (!authHeaders) {
+        setIsAdmin(false)
+
+        if (location.pathname.startsWith('/admin')) {
+          navigate('/')
+          toast.error('Unable to verify admin access right now')
+        }
+
+        return false
+      }
+
       const { data } = await axiosInstance.get('/api/admin/is-admin', {
-        headers: await getAuthHeaders(),
+        headers: authHeaders,
       })
 
       const allowed = Boolean(data.success && data.isAdmin)
@@ -61,7 +82,7 @@ export const AppProvider = ({ children }) => {
       console.error(error)
       return false
     }
-  }, [getAuthHeaders, location.pathname, navigate, user])
+  }, [getAuthHeaders, isClerkLoaded, location.pathname, navigate, user])
 
   const fetchShows = useCallback(async () => {
     try {
@@ -106,14 +127,25 @@ export const AppProvider = ({ children }) => {
   }, [])
 
   const fetchFavoriteMovies = useCallback(async () => {
+    if (!isClerkLoaded) {
+      return
+    }
+
     if (!user) {
       setFavoriteMovies([])
       return
     }
 
     try {
+      const authHeaders = await getAuthHeaders()
+
+      if (!authHeaders) {
+        setFavoriteMovies([])
+        return
+      }
+
       const { data } = await axiosInstance.get('/api/user/favorites', {
-        headers: await getAuthHeaders(),
+        headers: authHeaders,
       })
 
       if (data.success) {
@@ -125,7 +157,7 @@ export const AppProvider = ({ children }) => {
       console.error(error)
       toast.error('Unable to load favorite movies')
     }
-  }, [getAuthHeaders, user])
+  }, [getAuthHeaders, isClerkLoaded, user])
 
   const refreshMovieTrailers = useCallback(async () => {
     try {
