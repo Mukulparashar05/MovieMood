@@ -16,7 +16,7 @@ const MovieDetails = () => {
   const { id } = useParams()
   const [show, setShow] = useState(null)
 
-  const { axios, favoriteMovies, fetchFavoriteMovies, getAuthHeaders, imageBaseUrl, shows, user } = useAppContext()
+  const { authFeaturesEnabled, axios, favoriteMovies, fetchFavoriteMovies, getAuthHeaders, imageBaseUrl, shows, user } = useAppContext()
 
   const getShow = useCallback(async () => {
     if (!id || !/^\d+$/.test(id)) {
@@ -44,10 +44,20 @@ const MovieDetails = () => {
         return toast.error('Please login to continue')
       }
 
+      if (!authFeaturesEnabled) {
+        return toast('Favorites are disabled on the public demo. Use local development for signed-in features.')
+      }
+
+      const authHeaders = await getAuthHeaders()
+
+      if (!authHeaders) {
+        return toast('Favorites are unavailable in this demo environment.')
+      }
+
       const { data } = await axios.post(
         '/api/user/update-favorite',
         { movieId: id },
-        { headers: await getAuthHeaders() },
+        { headers: authHeaders },
       )
 
       if (data.success) {
@@ -101,9 +111,11 @@ const MovieDetails = () => {
               Buy Tickets
             </a>
 
-            <button onClick={handleFavorite} className='bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95'>
-              <Heart className={`w-5 h-5 ${favoriteMovies.find(movie => movie._id=== id) ? 'fill-primary text-primary': ""}`} />
-            </button>
+            {authFeaturesEnabled && (
+              <button onClick={handleFavorite} className='bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95'>
+                <Heart className={`w-5 h-5 ${favoriteMovies.find(movie => movie._id=== id) ? 'fill-primary text-primary': ""}`} />
+              </button>
+            )}
           </div>
         </div>
       </div>

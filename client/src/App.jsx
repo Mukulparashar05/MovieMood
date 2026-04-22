@@ -19,9 +19,11 @@ import  Layout  from './pages/admin/Layout'
 import { useAppContext } from './context/appContext'
 import { SignIn } from '@clerk/clerk-react'
 import Loading from './components/Loading'
+import BrowseOnlyNotice from './components/BrowseOnlyNotice'
+
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith('/admin');
-const {user} =useAppContext()
+const { authFeaturesEnabled, user } =useAppContext()
   return (
     <>
       <Toaster />
@@ -33,12 +35,33 @@ const {user} =useAppContext()
         <Route path='/releases' element={<Releases />} />
         <Route path='/movies/:id' element={<MovieDetails />} />
         <Route path='/movies/:id/:date' element={<SeatLayout />} />
-        <Route path='/my-bookings' element={<MyBookings />} />
+        <Route
+          path='/my-bookings'
+          element={authFeaturesEnabled ? <MyBookings /> : (
+            <BrowseOnlyNotice
+              title='Bookings Are Available Locally'
+              description='This public demo is set up for browsing movies and showtimes only. Signed-in booking history is available in local development.'
+            />
+          )}
+        />
         <Route path='/loading/:nextUrl' element={<Loading />} />
-        <Route path='/favorite' element={<Favorite />} />
+        <Route
+          path='/favorite'
+          element={authFeaturesEnabled ? <Favorite /> : (
+            <BrowseOnlyNotice
+              title='Favorites Are Disabled On This Demo'
+              description='The hosted demo focuses on browsing. Favorites are available in local development where signed-in features are fully enabled.'
+            />
+          )}
+        />
 
 
-        <Route path='/admin/*' element = {user?<Layout />:(
+        <Route path='/admin/*' element = {!authFeaturesEnabled ? (
+          <BrowseOnlyNotice
+            title='Admin Tools Run Locally'
+            description='The public demo is browse-only. Admin management is intentionally disabled here and remains available in your local environment.'
+          />
+        ) : user?<Layout />:(
           <div className='min-h-screen flex justify-center items-center'>
             <SignIn fallbackRedirectUrl={'/admin'}/>
           </div>

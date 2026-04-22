@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { AppContext } from './appContext'
 import { getApiBaseUrl } from '../lib/api'
 import { getAuthHeaders as buildAuthHeaders } from '../lib/authHeaders'
+import { canUseProtectedAuthFeatures } from '../lib/demoMode'
 
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
@@ -26,15 +27,28 @@ export const AppProvider = ({ children }) => {
   const location = useLocation()
   const navigate = useNavigate()
   const isClerkLoaded = isAuthLoaded && isUserLoaded
+  const authFeaturesEnabled = canUseProtectedAuthFeatures({
+    hostname: typeof window !== 'undefined' ? window.location.hostname : '',
+    publishableKey: import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+  })
 
   const getAuthHeaders = useCallback(async () => {
+    if (!authFeaturesEnabled) {
+      return null
+    }
+
     return buildAuthHeaders({
       getToken,
       isAuthLoaded: isClerkLoaded,
     })
-  }, [getToken, isClerkLoaded])
+  }, [authFeaturesEnabled, getToken, isClerkLoaded])
 
   const fetchIsAdmin = useCallback(async () => {
+    if (!authFeaturesEnabled) {
+      setIsAdmin(false)
+      return false
+    }
+
     if (!isClerkLoaded) {
       return false
     }
@@ -82,7 +96,7 @@ export const AppProvider = ({ children }) => {
       console.error(error)
       return false
     }
-  }, [getAuthHeaders, isClerkLoaded, location.pathname, navigate, user])
+  }, [authFeaturesEnabled, getAuthHeaders, isClerkLoaded, location.pathname, navigate, user])
 
   const fetchShows = useCallback(async () => {
     try {
@@ -127,6 +141,11 @@ export const AppProvider = ({ children }) => {
   }, [])
 
   const fetchFavoriteMovies = useCallback(async () => {
+    if (!authFeaturesEnabled) {
+      setFavoriteMovies([])
+      return
+    }
+
     if (!isClerkLoaded) {
       return
     }
@@ -157,7 +176,7 @@ export const AppProvider = ({ children }) => {
       console.error(error)
       toast.error('Unable to load favorite movies')
     }
-  }, [getAuthHeaders, isClerkLoaded, user])
+  }, [authFeaturesEnabled, getAuthHeaders, isClerkLoaded, user])
 
   const refreshMovieTrailers = useCallback(async () => {
     try {
@@ -204,6 +223,7 @@ export const AppProvider = ({ children }) => {
 
   const value = useMemo(() => ({
     axios: axiosInstance,
+    authFeaturesEnabled,
     favoriteMovies,
     fetchFavoriteMovies,
     fetchIsAdmin,
@@ -220,6 +240,7 @@ export const AppProvider = ({ children }) => {
     shows,
     user,
   }), [
+    authFeaturesEnabled,
     favoriteMovies,
     fetchFavoriteMovies,
     fetchIsAdmin,
