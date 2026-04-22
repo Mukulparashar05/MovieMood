@@ -7,6 +7,7 @@ import isoTimeFormat from '../lib/isoTimeFormat'
 import BlurCircle from '../components/BlurCircle'
 import toast from 'react-hot-toast'
 import { useAppContext } from '../context/appContext'
+import { PUBLIC_DEMO_CHECKOUT_MESSAGE, getCheckoutBlockReason } from '../lib/checkoutAccess'
 const SeatLayout = () => {
 
   const groupRows = [["A", "B"], ["C", "D"], ["E", "F"], ["G", "H"], ["I", "J"]]
@@ -17,7 +18,7 @@ const SeatLayout = () => {
   const [show, setshow] = useState(null)
   const [occupiedSeats,setOccupiedSeats] = useState([])
 
-const { axios, getAuthHeaders, user } = useAppContext();
+const { authFeaturesEnabled, axios, getAuthHeaders, user } = useAppContext();
 
   const getshow = useCallback(async () => {
     try{
@@ -81,9 +82,18 @@ const { axios, getAuthHeaders, user } = useAppContext();
 
 const bookTickets = async ()=>{
   try{
-    if(!user) return toast.error("please login to proceed")
-      if(!selectedTime || !selectedSeats.length) return toast.error('please select a time and seats')
-        const {data} = await axios.post('/api/booking/create',{showId:selectedTime.showId,selectedSeats},{headers: await getAuthHeaders()});
+    const blockReason = getCheckoutBlockReason({
+      authFeaturesEnabled,
+      user,
+      selectedTime,
+      selectedSeats,
+    })
+
+    if (blockReason) {
+      return authFeaturesEnabled ? toast.error(blockReason) : toast(blockReason)
+    }
+
+    const {data} = await axios.post('/api/booking/create',{showId:selectedTime.showId,selectedSeats},{headers: await getAuthHeaders()});
 
     if(data.success){
     window.location.href = data.url;
@@ -156,9 +166,24 @@ catch(error){
 
           </div>
         </div>
-<div  onClick={bookTickets} className='flex items-center gap-1 mt-20 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95'>Proceed to Checkout
-<ArrowRightIcon strokeWidth={3} className='w-4 h-4' />
-</div>
+        {!authFeaturesEnabled && (
+          <p className='mt-12 max-w-lg text-center text-sm text-gray-300'>
+            {PUBLIC_DEMO_CHECKOUT_MESSAGE}
+          </p>
+        )}
+        <button
+          type='button'
+          onClick={bookTickets}
+          disabled={!authFeaturesEnabled}
+          className={`flex items-center gap-1 mt-6 px-10 py-3 text-sm rounded-full font-medium transition ${
+            authFeaturesEnabled
+              ? 'bg-primary hover:bg-primary-dull cursor-pointer active:scale-95'
+              : 'bg-white/10 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {authFeaturesEnabled ? 'Proceed to Checkout' : 'Checkout Disabled On Demo'}
+          <ArrowRightIcon strokeWidth={3} className='w-4 h-4' />
+        </button>
       </div>
     </div>
   ) : (
